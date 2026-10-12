@@ -1,0 +1,40 @@
+services:
+  database:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Missing DB_NAME}
+      POSTGRES_USER: ${DB_USER:?Missing DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    image: hw-backend:v1
+    ports:
+      - "${PORT:?Missing PORT}:3000"
+    environment:
+      PORT: "3000"
+      PGHOST: database
+      PGPORT: "5432"
+      PGDATABASE: ${DB_NAME}
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - backend-net
+
+volumes:
+  pgdata:
+
+networks:
+  backend-net:
+    driver: bridge
